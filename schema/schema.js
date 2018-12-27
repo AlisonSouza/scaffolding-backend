@@ -1,6 +1,11 @@
 const graphql = require('graphql');
 const Book = require('../models/book');
 const Author = require('../models/author');
+const Purchase = require('../models/purchase');
+const Income = require('../models/income');
+const Portifolio = require('../models/portifolio');
+const Company = require('../models/company');
+const User = require('../models/user');
 
 const {
     GraphQLObjectType,
@@ -17,8 +22,14 @@ const UserType = new GraphQLObjectType({
     name: 'User',
     fields: () => ({
         id: {type: GraphQLID},
-        userName: {type: GraphQLString},
-        email: {type: GraphQLString}
+        name: {type: GraphQLString},
+        email: {type: GraphQLString},
+        portifolio: {
+            type: new GraphQLList(PortifolioType),
+            resolve(parent, args){
+                return Portifolio.find({userId: parent.id});
+            }
+        }
     })
 });
 
@@ -27,11 +38,11 @@ const PortifolioType = new GraphQLObjectType({
     fields: () => ({
         id: {type: GraphQLID},
         name: {type: GraphQLString},
-        user: {
-            type: UserType,
+        company: {
+            type: new GraphQLList(CompanyType),
             resolve(parent, args){
-                return UserType.findById(parent.userId);
-            } 
+                return Company.find({companyId: parent.companyId});
+            }
         }
     })
 });
@@ -41,7 +52,13 @@ const CompanyType = new GraphQLObjectType({
     fields: () => ({
         id: {type: GraphQLID},
         name: {type: GraphQLString},
-        code: {type: GraphQLString}
+        code: {type: GraphQLString},
+        income: {
+            type: new GraphQLList(IncomeType),
+            resolve(parent, args){
+                return Income.find({companyId: parent.id});
+            }
+        }
     })
 });
 
@@ -55,7 +72,7 @@ const PurchaseType = new GraphQLObjectType({
         company: {
             type: CompanyType,
             resolve(parent, args){
-                return null;
+                return Company.findById(parent.companyId);
             }
         }
     })
@@ -71,7 +88,7 @@ const IncomeType = new GraphQLObjectType({
         company: {
             type: CompanyType,
             resolve(parent, args){
-                return company.findById(parent.companyId);
+                return Company.findById(parent.companyId);
             }
         }
     })
@@ -110,6 +127,34 @@ const AuthorType = new GraphQLObjectType({
 const RootQuery = new GraphQLObjectType({
         name: 'RootQueryType',
         fields: {
+            portifolio: {
+                type: PortifolioType,
+                args: {id:{type: GraphQLID}},
+                resolve(parent, args){
+                    return Portifolio.findById(args.id);
+                }
+            },
+            user: {
+                type: UserType,
+                args: {id:{type: GraphQLID}},
+                resolve(parent, args){
+                    return User.findById(args.id);
+                }
+            },
+            company: {
+                type: CompanyType,
+                args: {id:{type: GraphQLID}},
+                resolve(parent, args){
+                    return Company.findById(args.id);
+                }
+            },
+            income: {
+                type: IncomeType,
+                args: {id:{type: GraphQLID}},
+                resolve(parent, args){
+                    return Income.findById(args.id);
+                }
+            },
             book: {
                 type: BookType,
                 args: {id:{type: GraphQLID}},
@@ -142,13 +187,41 @@ const RootQuery = new GraphQLObjectType({
 const Mutation = new GraphQLObjectType({
     name: 'Mutation',
     fields: {
-        addAuthor:{
+        addUser: {
+            type: UserType,
+            args: {
+                name: {type: new GraphQLNonNull(GraphQLString)},
+                email: {type: new GraphQLNonNull(GraphQLString)}
+            },
+            resolve(parent, args) {
+                let user = new User({
+                    name: args.name,
+                    email: args.email
+                });
+                return user.save();
+            }
+        },
+        addPortifolio: {
+            type: PortifolioType,
+            args: {
+                name: {type: new GraphQLNonNull(GraphQLString)},
+                userId: {type: new GraphQLNonNull(GraphQLString)}
+            },
+            resolve(parent, args) {
+                let portifolio = new Portifolio({
+                    name: args.name,
+                    userId: args.userId
+                });
+                return portifolio.save();
+            }
+        },
+        addAuthor: {
             type: AuthorType,
-            args:{
-                name:{type: new GraphQLNonNull(GraphQLString)},
+            args: {
+                name: {type: new GraphQLNonNull(GraphQLString)},
                 age: {type: new GraphQLNonNull(GraphQLInt)}
             },
-            resolve(parent, args){
+            resolve(parent, args) {
                 let author = new Author({
                     name: args.name,
                     age: args.age
@@ -170,6 +243,40 @@ const Mutation = new GraphQLObjectType({
                     authorId: args.authorId
                 });
                 return book.save();
+            }
+        },
+        addCompany: {
+            type: CompanyType,
+            args: {
+                name: {type: new GraphQLNonNull(GraphQLString)},
+                code: {type: new GraphQLNonNull(GraphQLString)}
+            },
+            resolve(parent, args){
+                let company = new Company({
+                    name: args.name,
+                    code: args.code
+                });
+                return company.save();
+            }
+        },
+        addIncome: {
+            type: IncomeType,
+            args: {
+                exDividendDate: {type: GraphQLString},
+                earningsDate: {type: GraphQLString},
+                incomeType: {type: new GraphQLNonNull(GraphQLString)},
+                value: {type: new GraphQLNonNull(GraphQLString)},
+                companyId: {type: new GraphQLNonNull(GraphQLID)}
+            },
+            resolve(parent, args){
+                let income = new Income({
+                    exDividendDate: args.exDividendDate,
+                    earningsDate: args.earningsDate,
+                    incomeType: args.incomeType,
+                    value: args.value,
+                    companyId: args.companyId
+                });
+                return income.save();
             }
         }
     }
