@@ -5,7 +5,7 @@ const purchaseSchema = new Schema({
     price: String,
     purchaseDate: Date,
     quantity: Number,
-    portifolioId: String,
+    portifolioCompanyId: String,
     companyId: String
 });
 

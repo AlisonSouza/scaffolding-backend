@@ -3,8 +3,7 @@ const Schema = mongoose.Schema;
 
 const portifolioSchema = new Schema({
     name: String,
-    userId: String,
-    companyId: String
+    userId: String
 });
 
 module.exports = mongoose.model('Portifolio', portifolioSchema);

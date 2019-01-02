@@ -6,6 +6,7 @@ const Income = require('../models/income');
 const Portifolio = require('../models/portifolio');
 const Company = require('../models/company');
 const User = require('../models/user');
+const PortifolioCompany = require('../models/portifolioCompany');
 
 const {
     GraphQLObjectType,
@@ -33,15 +34,36 @@ const UserType = new GraphQLObjectType({
     })
 });
 
+const PortifolioCompanyType = new GraphQLObjectType({
+    name: 'PortifolioCompany',
+    fields: () => ({
+        id: {type: GraphQLID},
+        portifolioId: {type: GraphQLID},
+        company: {
+            type: CompanyType,
+            resolve(parent, args){
+                return Company.findById(parent.companyId);
+            }
+        },
+        purchases: {
+            type: new GraphQLList(PurchaseType),
+            resolve(parent, args){
+                return Purchase.find({portifolioCompanyId: parent.id});
+            }
+        }
+    })
+});
+
 const PortifolioType = new GraphQLObjectType({
     name: 'Portifolio',
     fields: () => ({
         id: {type: GraphQLID},
         name: {type: GraphQLString},
-        company: {
-            type: new GraphQLList(CompanyType),
+        portifolioCompany: {
+            type: new GraphQLList(PortifolioCompanyType),
+
             resolve(parent, args){
-                return Company.find({companyId: parent.companyId});
+                return PortifolioCompany.find({portifolioId: parent.id});
             }
         }
     })
@@ -66,12 +88,19 @@ const PurchaseType = new GraphQLObjectType({
     name: 'Purchase',
     fields: () => ({
         id: {type: GraphQLID},
-        price: {type: GraphQLInt},
+        price: {type: GraphQLString},
         quantity: {type: GraphQLInt},
         purchaseDate: {type: GraphQLInt},
+        portifolioCompany: {
+            type: PortifolioCompanyType,
+            resolve(parent, args){
+                return PortifolioCompany.findById(parent.portifolioCompanyId);
+            }
+        },
         company: {
             type: CompanyType,
             resolve(parent, args){
+
                 return Company.findById(parent.companyId);
             }
         }
@@ -127,6 +156,20 @@ const AuthorType = new GraphQLObjectType({
 const RootQuery = new GraphQLObjectType({
         name: 'RootQueryType',
         fields: {
+            purchase: {
+                type: PurchaseType,
+                args: {id:{type: GraphQLID}},
+                resolve(parent, args){
+                    return Purchase.findById(args.id);
+                }
+            },
+            portifolioCompany: {
+                type: PortifolioCompanyType,
+                args: {id:{type: GraphQLID}},
+                resolve(parent, args){
+                    return PortifolioCompany.find({portifolioId: args.portifolioId});
+                }
+            },
             portifolio: {
                 type: PortifolioType,
                 args: {id:{type: GraphQLID}},
@@ -187,6 +230,40 @@ const RootQuery = new GraphQLObjectType({
 const Mutation = new GraphQLObjectType({
     name: 'Mutation',
     fields: {
+        addPurchase: {
+            type: PurchaseType,
+            args: {
+                companyId: {type: new GraphQLNonNull(GraphQLID)},
+                portifolioCompanyId: {type: new GraphQLNonNull(GraphQLID)},
+                quantity: {type: new GraphQLNonNull(GraphQLFloat)},
+                price: {type: new GraphQLNonNull(GraphQLString)},
+                purchaseDate: {type: new GraphQLNonNull(GraphQLString)}
+            },
+            resolve(parent, args){
+                let purchase = new Purchase({
+                    companyId: args.companyId,
+                    portifolioCompanyId: args.portifolioCompanyId,
+                    quantity: args.quantity,
+                    price: args.price,
+                    purchaseDate: args.purchaseDate
+                });
+                return purchase.save();
+            }
+        },
+        addPortifolioCompany: {
+            type: PortifolioCompanyType,
+            args: {
+                portifolioId: {type: new GraphQLNonNull(GraphQLID)},
+                companyId: {type: new GraphQLNonNull(GraphQLID)}
+            },
+            resolve(parent, args) {
+                let portifolioCompany = new PortifolioCompany({
+                    portifolioId: args.portifolioId,
+                    companyId: args.companyId
+                });
+                return portifolioCompany.save();
+            }
+        },
         addUser: {
             type: UserType,
             args: {
