@@ -212,6 +212,12 @@ const RootQuery = new GraphQLObjectType({
                     return Author.findById(args.id);
                 }
             },
+            companies: {
+                type: new GraphQLList(CompanyType),
+                resolve(parent, args){
+                    return Company.find({});
+                }
+            },
             books: {
                 type: new GraphQLList(BookType),
                 resolve(parent, args){
